@@ -1,0 +1,243 @@
+# Legal Codes Search API - Cursor Rules
+
+## Project Context
+
+This is an AI-powered hybrid search system for California legal codes, combining Elasticsearch (keyword), Qdrant (semantic), and LLM-based RAG for intelligent query answering.
+
+**Current Status**: v0.1.0 MVP (Functional prototype)
+**Quality Status**: MVP quality - needs improvement but functional
+**Development Approach**: Iterate quickly, document limitations, improve in future versions
+
+## Core Architectural Decisions
+
+### 1. Data Model & Chunking Strategy
+- **Section-Level Granularity**: Each legal code section is a separate document/index entry
+- **No Hierarchical Fields in V1**: Keep data model simple (code, section, content)
+- **MongoDB as Source**: Data comes from existing MongoDB deployment, do not modify upstream
+- **Future Enhancement**: Hierarchical navigation (code → division → part → chapter → section) planned for V2
+
+### 2. Search Architecture
+- **Hybrid Search**: Combine Elasticsearch (keyword/BM25) + Qdrant (semantic/vectors) using RRF
+- **Intelligent Routing**: Automatic classification of queries (simple vs complex)
+  - Simple queries (e.g., "FAM 3044") → Fast keyword search (~20ms)
+  - Complex queries (e.g., "What are parental rights?") → RAG + LLM (~5s)
+- **Unified Interface**: Single web page with automatic routing, no manual mode selection
+
+### 3. AI/LLM Integration
+- **Local LLM**: Self-hosted openai/gpt-oss-120b (120B parameters)
+- **Embeddings**: Docker Model Runner with ai/embeddinggemma (768 dimensions)
+- **RAG System**: Retrieve top 5 sections, generate natural language summary with citations
+- **Quality Caveat**: LLM answers vary in quality, document limitations clearly
+
+### 4. Infrastructure & Deployment
+- **Prototype Port**: 8888 (independent from main website)
+- **Docker Compose**: All services containerized (Elasticsearch, Qdrant, search-api, sync-service)
+- **MongoDB Connection**: Shared from existing legal-codes-pipeline MongoDB (authentication required)
+- **No Integration**: Keep separate from codecond_ca website for V1
+
+## Development Principles
+
+### MVP-First Approach
+1. **Ship functional code quickly** - Don't over-engineer V1
+2. **Document limitations honestly** - Be transparent about quality issues
+3. **Iterate based on feedback** - Improve in V2, V3, etc.
+4. **Avoid complexity traps** - Simple solutions > perfect solutions for V1
+
+### Quality vs Speed Trade-offs
+- ✅ Accept that LLM answer quality needs improvement
+- ✅ Use heuristic-based classification (not ML) for V1
+- ✅ Limited RAG context window (5 sections) is acceptable
+- ✅ No comprehensive test suite required for MVP
+- ⚠️ Document all limitations in CHANGELOG.md
+
+### Code Organization
+- **FastAPI** for search API
+- **Python 3.11** for both API and sync service
+- **Type hints** where practical, but not required everywhere
+- **Clear separation** between services (search-api, sync-service)
+
+## Technical Guidelines
+
+### MongoDB Integration
+```python
+# Always use authentication
+MONGODB_URL = "mongodb://admin:legalcodes123@legal-codes-pipeline-mongodb:27017/ca_codes_db?authSource=admin"
+
+# Database and collection
+DATABASE = "ca_codes_db"
+COLLECTION = "section_contents"
+
+# Extract content from versions array if top-level content is null
+content = doc.get('content') or (doc.get('versions', [{}])[0].get('content', ''))
+```
+
+### Search Endpoint Patterns
+```python
+# Use intelligent search by default
+@router.post("/intelligent/search")
+async def intelligent_search(request: IntelligentSearchRequest):
+    # 1. Classify query (simple vs complex)
+    # 2. Route to keyword or RAG
+    # 3. Return unified response with classification metadata
+```
+
+### Qdrant Indexing
+- Use **QdrantHTTPIndexer** (custom HTTP client) instead of official client
+- Convert string document_id to stable 63-bit integer hash for point IDs
+- Store original document_id in payload
+- Vector dimension: 768 (matching ai/embeddinggemma)
+
+### Web Interface
+- Single-page interface at `http://localhost:8888/`
+- Automatic AI routing (no manual mode selection needed)
+- Display AI-generated answers prominently in yellow highlighted box
+- Show classification badges (FAST SEARCH, AI-POWERED, RAG + LLM)
+- Support code filtering (FAM, PEN, CIV, CCP, BPC, LAB, VEH, WIC)
+
+## File Structure Rules
+
+### Documentation
+- Update `CHANGELOG.md` for every version
+- Keep `VERSION` file in sync with git tags
+- Document limitations honestly in release notes
+- Provide examples in all guides
+
+### Configuration
+- Use YAML for service configs (`config/*.yaml`)
+- Environment variables override YAML defaults
+- Always provide `env.template` with secure defaults
+- Document all environment variables
+
+### Code Style
+- FastAPI routers in `search-api/routers/`
+- Services in `search-api/services/` or `sync-service/services/`
+- Models in `models/` subdirectories
+- Keep Dockerfiles minimal and single-stage
+
+## Known Issues & Workarounds
+
+### Qdrant Client Library
+- **Issue**: Official client has ID format issues
+- **Workaround**: Custom QdrantHTTPIndexer using direct HTTP API
+- **Location**: `sync-service/indexers/qdrant_http_indexer.py`
+
+### PyMongo Boolean Check
+- **Issue**: Collection objects don't support truth value testing
+- **Fix**: Use `if collection is None:` instead of `if not collection:`
+
+### Docker Model Runner Access
+- **Issue**: Container needs to access host machine for LLM
+- **Fix**: Use `host.docker.internal` or specific IP (e.g., `192.168.86.47`)
+
+## API Design Patterns
+
+### Request/Response Models
+```python
+# Always include metadata
+class SearchResponse(BaseModel):
+    query: str
+    classification: str  # "simple" or "complex"
+    search_mode: str     # "keyword", "semantic", "hybrid", "rag"
+    results: List[SearchResult]
+    metadata: SearchMetadata
+    rag_context: Optional[RAGContext] = None
+```
+
+### Error Handling
+- Return informative error messages
+- Log errors with context
+- Don't expose internal stack traces to users
+- Provide fallback behavior when possible
+
+## Testing Strategy (V1)
+
+- ✅ Manual testing via web interface
+- ✅ API testing via Swagger UI (`/docs`)
+- ✅ Health checks for all services
+- ❌ Unit tests (deferred to V2)
+- ❌ Integration tests (deferred to V2)
+- ❌ E2E tests (deferred to V2)
+
+## Future Version Planning
+
+### V0.2.0 - Quality Improvements
+- Fine-tune embedding model on legal corpus
+- Optimize LLM prompts for better answers
+- Implement ML-based query classification
+- Expand RAG context window
+- Add answer quality validation
+
+### V0.3.0 - Feature Additions
+- Hierarchical code navigation
+- User authentication/authorization
+- Search history and bookmarks
+- Advanced filtering and facets
+- Export capabilities (PDF, citations)
+
+### V1.0.0 - Production Ready
+- Comprehensive test suite
+- Performance optimization (caching, CDN)
+- Monitoring and alerting
+- Rate limiting and abuse prevention
+- CI/CD pipeline
+- Multi-language support
+
+## Commands Reference
+
+```bash
+# Start all services
+docker-compose up -d
+
+# Check health
+make health
+
+# Sync data from MongoDB
+make sync
+
+# View logs
+docker-compose logs -f search-api
+
+# Restart services
+docker-compose restart search-api
+
+# Access web interface
+open http://localhost:8888
+
+# Access API docs
+open http://localhost:8888/docs
+```
+
+## Key Metrics (v0.1.0)
+
+- **Total Sections**: 18,134
+- **Elasticsearch Index**: 18,134 documents
+- **Qdrant Points**: 18,134 vectors (768 dimensions)
+- **Keyword Search**: ~20-50ms
+- **Semantic Search**: ~100-200ms
+- **Hybrid Search**: ~150-300ms
+- **RAG + LLM**: ~5-6 seconds
+
+## GitHub Repository
+
+- **URL**: https://github.com/qter21/legal-codes-search-api
+- **Current Version**: v0.1.0
+- **License**: (To be determined)
+- **Status**: Public repository, MVP release
+
+## Important Notes for Cursor AI
+
+1. **Prioritize shipping over perfection** - This is an MVP, iterate quickly
+2. **Document limitations clearly** - Be honest about what needs improvement
+3. **Keep it simple** - Don't over-engineer V1 features
+4. **Section-level data model** - Never aggregate sections into parent codes
+5. **Independent prototype** - Don't integrate with existing website yet
+6. **Quality comes later** - Focus on functionality first, refinement in V2+
+7. **Use existing MongoDB** - Never modify the source database
+8. **Port 8888** - Always run search API on this port for prototype
+9. **Unified interface** - Keep keyword and intelligent search in one page
+10. **Local-first** - Use self-hosted models (LLM, embeddings)
+
+---
+
+**Last Updated**: October 16, 2025 (v0.1.0 MVP Release)
+
