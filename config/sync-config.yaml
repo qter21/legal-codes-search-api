@@ -1,0 +1,61 @@
+mongodb:
+  connection_string: "mongodb://admin:legalcodes123@legal-codes-pipeline-mongodb:27017/ca_codes_db?authSource=admin"
+  database: "ca_codes_db"
+  collection: "section_contents"
+  batch_size: 1000
+  query_filter: {}  # Empty for all documents, or add filters like {"state": "CA"}
+
+elasticsearch:
+  url: "http://localhost:9200"
+  index_name: "legal_codes"
+  bulk_size: 500
+  timeout: 30
+
+qdrant:
+  url: "http://localhost:6333"
+  collection_name: "legal_codes_vectors"
+  batch_size: 100
+  timeout: 30
+
+embedding:
+  model_name: "ai/embeddinggemma"  # Using Docker Model Runner
+  dimension: 768  # embeddinggemma produces 768-dimensional vectors
+  device: "cpu"  # Not used with Docker Model Runner
+  max_length: 2048  # embeddinggemma supports up to 2048 tokens
+  combination_strategy: "concat"
+  separator: " | "
+  
+  # Fields to use for embedding generation
+  text_fields:
+    - code
+    - section
+    - content
+  
+  # Strategy for combining fields: 'concat' or 'weighted'
+  combination_strategy: "concat"
+  separator: " | "
+
+sync:
+  schedule: "0 2 * * *"  # Cron format: Daily at 2 AM
+  timezone: "America/Los_Angeles"
+  
+  # Sync modes: 'full', 'incremental'
+  mode: "full"
+  
+  # For incremental sync, use this field to track changes
+  timestamp_field: "updated_at"
+  
+  # State tracking
+  state_file: "/app/logs/sync_state.json"
+  log_file: "/app/logs/sync.log"
+  
+  # Error handling
+  max_retries: 3
+  retry_delay: 5  # seconds
+  continue_on_error: true
+
+performance:
+  workers: 4  # Number of parallel workers
+  embedding_batch_size: 32  # Batch size for embedding generation
+  prefetch_batches: 2  # Number of batches to prefetch
+

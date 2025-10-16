@@ -1,0 +1,97 @@
+api:
+  title: "Legal Codes Search API - Prototype"
+  version: "1.0.0"
+  description: "Independent prototype for testing hybrid search on California legal codes. Reads from existing MongoDB (no modifications)."
+  host: "0.0.0.0"
+  port: 8000  # Internal port (exposed as 8888 externally)
+
+elasticsearch:
+  url: "http://elasticsearch:9200"
+  index_name: "legal_codes"
+  timeout: 10
+  max_retries: 3
+
+qdrant:
+  url: "http://qdrant:6333"
+  collection_name: "legal_codes_vectors"
+  timeout: 10
+  max_retries: 3
+
+embedding:
+  model_name: "all-MiniLM-L6-v2"
+  dimension: 384
+  device: "cpu"
+  cache_size: 1000  # Cache for query embeddings
+
+search:
+  # Default search parameters
+  default_limit: 10
+  max_limit: 100
+  
+  # Keyword search settings
+  keyword:
+    default_fields:
+      - "title^3"  # Boost title matches
+      - "section^2"
+      - "content"
+    fuzziness: "AUTO"
+    minimum_should_match: "75%"
+  
+  # Semantic search settings
+  semantic:
+    score_threshold: 0.7  # Minimum similarity score
+    ef_search: 100  # HNSW search parameter
+  
+  # Hybrid search settings
+  hybrid:
+    # Result fusion method: 'rrf' (Reciprocal Rank Fusion) or 'weighted'
+    fusion_method: "rrf"
+    
+    # Weights for weighted fusion (ignored if using RRF)
+    keyword_weight: 0.5
+    semantic_weight: 0.5
+    
+    # RRF constant (k parameter, typically 60)
+    rrf_k: 60
+    
+    # Retrieve top N from each source before fusion
+    retrieve_top_n: 50
+
+pagination:
+  default_page: 1
+  default_page_size: 10
+  max_page_size: 100
+
+caching:
+  enabled: false  # Set to true to enable Redis caching
+  redis_url: "redis://localhost:6379"
+  ttl: 3600  # Cache TTL in seconds
+  
+filters:
+  # Allow filtering by these fields
+  allowed_fields:
+    - statute_code
+    - effective_date
+    - title
+
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "json"  # json or text
+  file: "/app/logs/api.log"
+
+cors:
+  enabled: true
+  origins:
+    - "http://localhost:3000"
+    - "https://codecond-ca.example.com"
+  allow_credentials: true
+  allow_methods:
+    - "GET"
+    - "POST"
+  allow_headers:
+    - "*"
+
+rate_limiting:
+  enabled: false  # Set to true to enable
+  requests_per_minute: 60
+

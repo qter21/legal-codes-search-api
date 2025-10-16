@@ -1,0 +1,75 @@
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 1,
+    "analysis": {
+      "analyzer": {
+        "legal_text_analyzer": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "english_stop",
+            "english_stemmer",
+            "legal_synonym"
+          ]
+        }
+      },
+      "filter": {
+        "english_stop": {
+          "type": "stop",
+          "stopwords": "_english_"
+        },
+        "english_stemmer": {
+          "type": "stemmer",
+          "language": "english"
+        },
+        "legal_synonym": {
+          "type": "synonym",
+          "synonyms": [
+            "statute, law, code",
+            "section, subsection",
+            "amendment, revision"
+          ]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "statute_code": {
+        "type": "keyword"
+      },
+      "title": {
+        "type": "text",
+        "analyzer": "legal_text_analyzer",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "section": {
+        "type": "text",
+        "analyzer": "legal_text_analyzer"
+      },
+      "content": {
+        "type": "text",
+        "analyzer": "legal_text_analyzer"
+      },
+      "effective_date": {
+        "type": "date",
+        "format": "yyyy-MM-dd||yyyy-MM-dd'T'HH:mm:ss||epoch_millis"
+      },
+      "updated_at": {
+        "type": "date",
+        "format": "yyyy-MM-dd||yyyy-MM-dd'T'HH:mm:ss||epoch_millis"
+      },
+      "document_id": {
+        "type": "keyword"
+      }
+    }
+  }
+}
+

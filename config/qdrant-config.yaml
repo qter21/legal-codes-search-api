@@ -1,0 +1,41 @@
+collection:
+  name: legal_codes_vectors
+  vector_config:
+    size: 384  # for all-MiniLM-L6-v2 (change to 768 for legal-bert-base)
+    distance: Cosine
+  
+  # HNSW index configuration for fast approximate search
+  hnsw_config:
+    m: 16  # Number of edges per node
+    ef_construct: 100  # Size of the dynamic candidate list
+    full_scan_threshold: 10000  # Switch to full scan for small datasets
+  
+  # Optimization settings
+  optimizer_config:
+    deleted_threshold: 0.2
+    vacuum_min_vector_number: 1000
+    default_segment_number: 0
+    max_segment_size: 20000
+    memmap_threshold: 50000
+    indexing_threshold: 20000
+    flush_interval_sec: 5
+    max_optimization_threads: 1
+
+  # Payload indexing for fast filtering
+  payload_schema:
+    statute_code:
+      type: keyword
+      indexed: true
+    title:
+      type: text
+      indexed: true
+    section:
+      type: text
+      indexed: false
+    effective_date:
+      type: datetime
+      indexed: true
+    document_id:
+      type: keyword
+      indexed: true
+

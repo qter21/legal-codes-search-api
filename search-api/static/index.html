@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CA Legal Codes Search</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+            padding-top: 60px;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            font-weight: 300;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .search-box {
+            background: white;
+            border-radius: 50px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            transition: box-shadow 0.3s;
+        }
+
+        .search-box:focus-within {
+            box-shadow: 0 6px 30px rgba(0,0,0,0.3);
+        }
+
+        .search-box input {
+            flex: 1;
+            border: none;
+            outline: none;
+            padding: 15px;
+            font-size: 16px;
+        }
+
+        .search-box button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .search-box button:hover {
+            background: #5568d3;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+            justify-content: center;
+        }
+
+        .filter-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: white;
+            color: #667eea;
+            border-color: white;
+        }
+
+        .stats {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .results {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            min-height: 200px;
+        }
+
+        .result-item {
+            border-bottom: 1px solid #e0e0e0;
+            padding: 20px 0;
+            transition: background 0.2s;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-item:hover {
+            background: #f8f9fa;
+            margin: 0 -10px;
+            padding: 20px 10px;
+            border-radius: 8px;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .result-code {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .result-section {
+            color: #666;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .result-score {
+            margin-left: auto;
+            color: #999;
+            font-size: 12px;
+        }
+
+        .result-content {
+            color: #333;
+            line-height: 1.6;
+            font-size: 15px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .no-results h3 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .pagination button {
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: #667eea;
+            color: white;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .welcome {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .welcome h2 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .welcome p {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .welcome .examples {
+            margin-top: 30px;
+        }
+
+        .welcome .example-chip {
+            display: inline-block;
+            background: #f0f0f0;
+            padding: 8px 16px;
+            margin: 5px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .welcome .example-chip:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .ai-answer {
+            background: linear-gradient(135deg, #fffacd 0%, #fff8b3 100%);
+            border-left: 5px solid #ffa500;
+            padding: 25px;
+            margin-bottom: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(255,165,0,0.1);
+        }
+
+        .ai-answer h3 {
+            color: #333;
+            font-size: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ai-answer-content {
+            color: #333;
+            line-height: 1.8;
+            font-size: 15px;
+            white-space: pre-wrap;
+        }
+
+        .classification-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .badge-simple {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .badge-complex {
+            background: #2196F3;
+            color: white;
+        }
+
+        .badge-rag {
+            background: #ff9800;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 CA Legal Codes Search</h1>
+            <p>🤖 AI-Powered Search | 18,134 California legal code sections</p>
+        </div>
+
+        <div class="search-box">
+            <input 
+                type="text" 
+                id="searchInput" 
+                placeholder="Search California legal codes..." 
+                onkeypress="handleKeyPress(event)"
+            >
+            <button onclick="search()">Search</button>
+        </div>
+
+        <div class="filters">
+            <button class="filter-btn active" onclick="setFilter('')">All Codes</button>
+            <button class="filter-btn" onclick="setFilter('FAM')">Family</button>
+            <button class="filter-btn" onclick="setFilter('PEN')">Penal</button>
+            <button class="filter-btn" onclick="setFilter('CIV')">Civil</button>
+            <button class="filter-btn" onclick="setFilter('CCP')">Civil Procedure</button>
+            <button class="filter-btn" onclick="setFilter('BPC')">Business</button>
+            <button class="filter-btn" onclick="setFilter('LAB')">Labor</button>
+            <button class="filter-btn" onclick="setFilter('VEH')">Vehicle</button>
+        </div>
+
+        <div id="stats" class="stats" style="display: none;"></div>
+
+        <div class="results">
+            <div id="resultsContainer">
+                <div class="welcome">
+                    <h2>Welcome to AI-Powered Legal Search!</h2>
+                    <p>Ask questions in plain English and get intelligent answers powered by a 120B parameter LLM.</p>
+                    <p style="margin-top: 20px; font-weight: 600;">Try asking:</p>
+                    <div class="examples">
+                        <span class="example-chip" onclick="searchExample('What are parental rights after divorce?')">What are parental rights after divorce?</span>
+                        <span class="example-chip" onclick="searchExample('How does child custody work?')">How does child custody work?</span>
+                        <span class="example-chip" onclick="searchExample('What happens when a child is adopted?')">What happens when a child is adopted?</span>
+                        <span class="example-chip" onclick="searchExample('FAM 3044')">FAM 3044</span>
+                        <span class="example-chip" onclick="searchExample('marriage license requirements')">marriage license requirements</span>
+                        <span class="example-chip" onclick="searchExample('criminal intent definition')">criminal intent definition</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFilter = '';
+        let currentPage = 0;
+        const resultsPerPage = 10;
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                search();
+            }
+        }
+
+        function setFilter(code) {
+            currentFilter = code;
+            currentPage = 0;
+            
+            // Update button states
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Re-run search if there's a query
+            const query = document.getElementById('searchInput').value.trim();
+            if (query) {
+                search();
+            }
+        }
+
+        function searchExample(query) {
+            document.getElementById('searchInput').value = query;
+            search();
+        }
+
+        async function search(page = 0) {
+            const query = document.getElementById('searchInput').value.trim();
+            
+            if (!query) {
+                alert('Please enter a search query');
+                return;
+            }
+
+            currentPage = page;
+            const resultsContainer = document.getElementById('resultsContainer');
+            const statsContainer = document.getElementById('stats');
+            
+            // Show loading
+            resultsContainer.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>🤖 AI analyzing your query...</p>
+                    <p style="font-size: 12px; color: #999; margin-top: 10px;">This may take a few seconds for complex questions</p>
+                </div>
+            `;
+            statsContainer.style.display = 'none';
+
+            try {
+                const response = await fetch('/intelligent/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        limit: resultsPerPage,
+                        offset: page * resultsPerPage,
+                        code_filter: currentFilter
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.results && data.results.length > 0) {
+                    displayResults(data);
+                } else {
+                    displayNoResults(query);
+                }
+            } catch (error) {
+                resultsContainer.innerHTML = `
+                    <div class="no-results">
+                        <h3>Error</h3>
+                        <p>Failed to connect to search API. Please try again.</p>
+                        <p style="color: #999; margin-top: 10px; font-size: 14px;">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function displayResults(data) {
+            const resultsContainer = document.getElementById('resultsContainer');
+            const statsContainer = document.getElementById('stats');
+            
+            // Map code abbreviations to full names
+            const codeNames = {
+                'FAM': 'Family Code',
+                'PEN': 'Penal Code',
+                'CIV': 'Civil Code',
+                'CCP': 'Civil Procedure',
+                'BPC': 'Business & Professions',
+                'LAB': 'Labor Code',
+                'VEH': 'Vehicle Code',
+                'WIC': 'Welfare & Institutions Code'
+            };
+            
+            // Classification badges
+            const classificationBadge = data.classification === 'simple' ? 
+                '<span class="classification-badge badge-simple">FAST SEARCH</span>' :
+                '<span class="classification-badge badge-complex">AI-POWERED</span>';
+            
+            const searchModeBadge = data.search_mode === 'rag' ?
+                '<span class="classification-badge badge-rag">RAG + LLM</span>' : '';
+            
+            // Show stats
+            statsContainer.style.display = 'block';
+            statsContainer.innerHTML = `
+                Found ${data.metadata.total_results.toLocaleString()} results in ${data.metadata.query_time_ms.toFixed(0)}ms
+                ${classificationBadge} ${searchModeBadge}
+                ${currentFilter ? ` (filtered by ${codeNames[currentFilter] || currentFilter})` : ''}
+            `;
+
+            // Display AI-generated summary if available
+            let html = '';
+            if (data.rag_context && data.rag_context.summary) {
+                html += `
+                    <div class="ai-answer">
+                        <h3>🤖 AI-Generated Answer</h3>
+                        <div class="ai-answer-content">${data.rag_context.summary}</div>
+                        <p style="margin-top: 15px; font-size: 13px; color: #666;">
+                            <em>Based on ${data.rag_context.context_used} relevant code sections</em>
+                        </p>
+                    </div>
+                    <h3 style="margin-top: 30px; margin-bottom: 20px; color: #333;">📚 Relevant Sections:</h3>
+                `;
+            }
+
+            // Display results
+            data.results.forEach(result => {
+                const code = result.statute_code || result.code || 'N/A';
+                const codeName = codeNames[code] || code;
+                const section = result.section || 'N/A';
+                const content = result.content || 'No content available';
+                const score = result.score ? result.score.toFixed(2) : '';
+
+                html += `
+                    <div class="result-item">
+                        <div class="result-header">
+                            <span class="result-code" title="${codeName}">${code}</span>
+                            <span class="result-section">\u00a7 ${section}</span>
+                            ${score ? `<span class="result-score">Score: ${score}</span>` : ''}
+                        </div>
+                        <div class="result-content">${highlightQuery(content, document.getElementById('searchInput').value)}</div>
+                    </div>
+                `;
+            });
+
+            // Add pagination
+            const totalPages = Math.ceil(data.metadata.total_results / resultsPerPage);
+            if (totalPages > 1) {
+                html += `
+                    <div class="pagination">
+                        <button onclick="search(${currentPage - 1})" ${currentPage === 0 ? 'disabled' : ''}>
+                            ← Previous
+                        </button>
+                        <span style="padding: 10px; color: #666;">
+                            Page ${currentPage + 1} of ${totalPages}
+                        </span>
+                        <button onclick="search(${currentPage + 1})" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>
+                            Next →
+                        </button>
+                    </div>
+                `;
+            }
+
+            resultsContainer.innerHTML = html;
+        }
+
+        function displayNoResults(query) {
+            const resultsContainer = document.getElementById('resultsContainer');
+            resultsContainer.innerHTML = `
+                <div class="no-results">
+                    <h3>No results found</h3>
+                    <p>No legal codes match "<strong>${query}</strong>"${currentFilter ? ` in ${currentFilter}` : ''}</p>
+                    <p style="margin-top: 20px; color: #999;">Try different keywords or remove filters</p>
+                </div>
+            `;
+        }
+
+        function highlightQuery(text, query) {
+            if (!query) return text;
+            
+            const terms = query.toLowerCase().split(' ').filter(t => t.length > 2);
+            let highlighted = text;
+            
+            terms.forEach(term => {
+                const regex = new RegExp(`(${term})`, 'gi');
+                highlighted = highlighted.replace(regex, '<strong style="background: #fff3cd;">$1</strong>');
+            });
+            
+            return highlighted;
+        }
+
+        // Focus search input on load
+        window.onload = () => {
+            document.getElementById('searchInput').focus();
+        };
+    </script>
+</body>
+</html>
+
